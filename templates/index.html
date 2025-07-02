@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub Webhook Activity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+
+    .filter-box {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    select {
+      padding: 8px 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .event {
+      background: #fafafa;
+      padding: 15px 20px;
+      margin-bottom: 15px;
+      border-left: 5px solid #007bff;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .event.push { border-left-color: #28a745; }
+    .event.pull_request { border-left-color: #ffc107; }
+    .event.merge { border-left-color: #dc3545; }
+
+    .timestamp {
+      font-size: 0.9rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GitHub Webhook Events</h1>
+
+    <!-- <div class="filter-box">
+      <label for="filter">Filter: </label>
+      <select id="filter" onchange="filterEvents()">
+        <option value="ALL">All</option>
+        <option value="PUSH">Push</option>
+        <option value="PULL_REQUEST">Pull Request</option>
+        <option value="MERGE">Merge</option>
+      </select>
+    </div> -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div id="refresh-timer" style="font-size: 0.9rem; color: #777;">
+        Refreshing in 15 seconds
+    </div>
+    
+    <div class="filter-box">
+        <label for="filter">Filter: </label>
+        <select id="filter" onchange="filterEvents()">
+        <option value="ALL">All</option>
+        <option value="PUSH">Push</option>
+        <option value="PULL_REQUEST">Pull Request</option>
+        <option value="MERGE">Merge</option>
+        </select>
+    </div>
+    </div>
+      
+
+    <div id="events"></div>
+  </div>
+
+  <script>
+    let allEvents = [];
+
+    function formatEvent(e) {
+      const ts = new Date(e.timestamp).toUTCString();
+      if (e.action === "PUSH") {
+        return `<b>${e.author}</b> pushed to <b>${e.to_branch}</b> on ${ts}`;
+      } else if (e.action === "PULL_REQUEST") {
+        return `<b>${e.author}</b> submitted a pull request from <b>${e.from_branch}</b> to <b>${e.to_branch}</b> on ${ts}`;
+      } else if (e.action === "MERGE") {
+        return `<b>${e.author}</b> merged branch <b>${e.from_branch}</b> to <b>${e.to_branch}</b> on ${ts}`;
+      } else {
+        return "Unknown event";
+      }
+    }
+
+    function renderEvents(events) {
+      const container = document.getElementById("events");
+      container.innerHTML = "";
+
+      events.reverse().forEach(e => {
+        const div = document.createElement("div");
+        div.className = `event ${e.action.toLowerCase()}`;
+        div.innerHTML = `
+          <div>${formatEvent(e)}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function fetchEvents() {
+      try {
+        const res = await fetch("/webhook/logs");
+        const data = await res.json();
+        allEvents = data;
+        filterEvents();
+      } catch (err) {
+        console.error("Error fetching events:", err);
+      }
+    }
+
+    let refreshInterval = 15;
+    let countdown = refreshInterval;
+
+    function updateTimerDisplay() {
+    const timer = document.getElementById("refresh-timer");
+    timer.textContent = `Refreshing in ${countdown} second${countdown !== 1 ? 's' : ''}`;
+    }
+
+
+    function filterEvents() {
+      const filter = document.getElementById("filter").value;
+      let filtered = allEvents;
+
+      if (filter !== "ALL") {
+        filtered = allEvents.filter(e => e.action === filter);
+      }
+
+      renderEvents(filtered);
+    }
+
+    fetchEvents();
+    updateTimerDisplay();
+
+    // Countdown and refresh loop
+    setInterval(() => {
+    countdown--;
+    updateTimerDisplay();
+
+    if (countdown === 0) {
+        fetchEvents();
+        countdown = refreshInterval;
+    }
+    }, 1000);
+  </script>
+</body>
+</html>
