@@ -8,8 +8,7 @@ import os
 def create_app():
     template_dir = os.path.abspath("templates")
     app = Flask(__name__, template_folder=template_dir)
-    app.config["MONGO_URI"] = "mongodb://localhost:27017/webhookDB"
-    app.config["MONGO_URI"] = "mongodb+srv://parag477:Parag9144@cluster0.l3nik0y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://localhost:27017/webhookDB")
 
     mongo.init_app(app)
     CORS(app)
